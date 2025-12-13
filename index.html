@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KB Threshold Detector - Rep Debug</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <h1>🔔 KB Rep Detector</h1>
+      <p id="status">Loading...</p>
+    </header>
+
+    <!-- Main content -->
+    <div class="main-content">
+      <!-- Video/Canvas area -->
+      <div class="video-section">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="output-canvas"></canvas>
+        
+        <!-- Overlay indicators -->
+        <div class="overlay-stats">
+          <span>FPS: <strong id="fps">--</strong></span>
+          <span>Reps: <strong id="rep-count">0</strong></span>
+        </div>
+      </div>
+
+      <!-- Debug panel -->
+      <div class="debug-panel">
+        <!-- Current Phase & Zone -->
+        <div class="panel-section">
+          <h3>Current State</h3>
+          <div class="state-row">
+            <div>
+              <label>Phase</label>
+              <div id="current-phase" class="phase-indicator phase-ready">READY</div>
+            </div>
+            <div>
+              <label>Zone</label>
+              <div id="current-zone" class="zone-indicator">--</div>
+            </div>
+          </div>
+          <div class="phase-legend">
+            <span class="legend-item"><span class="dot ready"></span>Ready</span>
+            <span class="legend-item"><span class="dot hike"></span>Hike</span>
+            <span class="legend-item"><span class="dot drive"></span>Drive</span>
+            <span class="legend-item"><span class="dot float"></span>Float</span>
+            <span class="legend-item"><span class="dot drop"></span>Drop</span>
+            <span class="legend-item"><span class="dot park"></span>Park</span>
+          </div>
+        </div>
+
+        <!-- 2D Position Plot -->
+        <div class="panel-section">
+          <h3>Wrist Position (relative to hip)</h3>
+          <div class="position-plot-container">
+            <div id="position-plot" class="position-plot">
+              <!-- Zone labels -->
+              <div class="plot-label top-label">HIGH (Float)</div>
+              <div class="plot-label left-label">BEHIND<br>(Hike)</div>
+              <div class="plot-label right-label">FORWARD<br>(Ready)</div>
+              <div class="plot-label bottom-label">LOW</div>
+              
+              <!-- Reference lines -->
+              <div class="plot-line horizontal"></div>
+              <div class="plot-line vertical"></div>
+              
+              <!-- Zone overlays -->
+              <div class="plot-zone zone-high"></div>
+              <div class="plot-zone zone-low-forward"></div>
+              <div class="plot-zone zone-low-behind"></div>
+              
+              <!-- Position dot -->
+              <div id="position-dot" class="position-dot"></div>
+            </div>
+            <div class="plot-axes">
+              <span>X: <span id="relative-x">0</span></span>
+              <span>Y: <span id="relative-height">0</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="panel-section">
+          <h3>Metrics</h3>
+          <div class="metrics-grid">
+            <div class="metric">
+              <label>Velocity Y</label>
+              <span id="velocity-y">0</span>
+            </div>
+            <div class="metric">
+              <label>Torso Length</label>
+              <span id="torso-length">--</span>
+            </div>
+            <div class="metric">
+              <label>Frames in Phase</label>
+              <span id="frames-in-phase">0</span>
+            </div>
+            <div class="metric">
+              <label>Stable?</label>
+              <span id="is-stable">no</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Threshold Tuning -->
+        <div class="panel-section">
+          <h3>Thresholds (Tune These)</h3>
+          
+          <div class="slider-group">
+            <label>
+              Low Threshold: <span id="lowThreshold-value">0.1</span>
+              <input type="range" id="lowThreshold" min="0" max="0.3" step="0.02" value="0.1">
+            </label>
+            <small>How far below hip = "low" position</small>
+          </div>
+          
+          <div class="slider-group">
+            <label>
+              Float Threshold: <span id="floatThreshold-value">0.25</span>
+              <input type="range" id="floatThreshold" min="0.1" max="0.6" step="0.05" value="0.25">
+            </label>
+            <small>How far above hip = "float" position</small>
+          </div>
+          
+          <div class="slider-group">
+            <label>
+              Forward Threshold: <span id="forwardThreshold-value">0.15</span>
+              <input type="range" id="forwardThreshold" min="0.05" max="0.4" step="0.02" value="0.15">
+            </label>
+            <small>X distance from hip to distinguish READY from HIKE</small>
+          </div>
+          
+          <div class="slider-group">
+            <label>
+              Min Drive Velocity: <span id="minDriveVelocity-value">1.5</span>
+              <input type="range" id="minDriveVelocity" min="0.5" max="5" step="0.25" value="1.5">
+            </label>
+            <small>Speed required to register as DRIVE</small>
+          </div>
+          
+          <div class="slider-group">
+            <label>
+              Min Frames in Phase: <span id="minFramesInPhase-value">2</span>
+              <input type="range" id="minFramesInPhase" min="1" max="8" step="1" value="2">
+            </label>
+            <small>Frames before allowing phase change</small>
+          </div>
+          
+          <div class="slider-group">
+            <label>
+              Stable Frames: <span id="stableFrames-value">8</span>
+              <input type="range" id="stableFrames" min="3" max="20" step="1" value="8">
+            </label>
+            <small>Frames of stability to detect READY/PARK</small>
+          </div>
+        </div>
+
+        <!-- Rep History -->
+        <div class="panel-section">
+          <h3>Rep History</h3>
+          <div id="rep-history" class="rep-history">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button id="start-btn" class="btn btn-primary">Start Camera</button>
+      <button id="reset-btn" class="btn btn-secondary">Reset</button>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+      <h3>Setup Instructions</h3>
+      <ol>
+        <li><strong>Camera Position:</strong> Side view (perpendicular to swing plane), full body visible</li>
+        <li><strong>Starting Position (READY):</strong> KB on floor ~2 foot lengths in front, hip hinged, hands on bell</li>
+        <li><strong>First Hike:</strong> Swing KB back between legs - phase should change to HIKE</li>
+        <li><strong>Drive:</strong> Hip snap - phase should change to DRIVE as wrist accelerates up</li>
+        <li><strong>Float:</strong> At peak - phase should change to FLOAT</li>
+        <li><strong>Drop:</strong> On descent - phase should change to DROP</li>
+        <li><strong>Next Rep:</strong> When KB swings back, should cycle back to HIKE</li>
+      </ol>
+      
+      <h4>Position Plot Guide</h4>
+      <ul>
+        <li><strong>READY zone:</strong> Low + Forward (bottom right) - KB on floor in front</li>
+        <li><strong>HIKE zone:</strong> Low + Behind (bottom center/left) - KB between legs</li>
+        <li><strong>FLOAT zone:</strong> High (top) - KB at chest level or above</li>
+        <li>The dot shows wrist position relative to hip in real-time</li>
+      </ul>
+      
+      <h4>Troubleshooting</h4>
+      <ul>
+        <li><strong>Stuck in READY:</strong> Lower the forwardThreshold - wrist may not be far enough forward</li>
+        <li><strong>Never reaches FLOAT:</strong> Lower the floatThreshold</li>
+        <li><strong>Skipping HIKE:</strong> Increase forwardThreshold or check camera angle</li>
+        <li><strong>Counting extra reps:</strong> Increase minFramesInPhase</li>
+        <li><strong>Not detecting PARK:</strong> Increase stableFrames</li>
+      </ul>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
