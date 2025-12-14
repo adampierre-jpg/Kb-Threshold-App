@@ -3,12 +3,19 @@ Rep detection for kettlebell swings and snatches.
 Identifies valid repetitions from a sequence of position samples.
 """
 
+import os
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Sequence
 import numpy as np
 
-from ..models import MovementType, PositionSample
+# Add api directory to path for Vercel deployment
+_api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _api_dir not in sys.path:
+    sys.path.insert(0, _api_dir)
+
+from models.schemas import MovementType, PositionSample
 
 
 @dataclass

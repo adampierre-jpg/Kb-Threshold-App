@@ -6,112 +6,84 @@ A production-ready web application that analyzes kettlebell swing and snatch vid
 
 ## Architecture Overview
 
+This app is designed to deploy on **Vercel** with:
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Backend**: Python serverless functions using MediaPipe for pose estimation
+
 ```
 kb-threshold-app/
-├── frontend/                 # React + TypeScript + Vite + Tailwind
-│   ├── src/
-│   │   ├── components/       # UI components
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── types/            # TypeScript types
-│   │   └── utils/            # Utility functions
-│   └── ...
-├── backend/                  # Python FastAPI + MediaPipe
-│   ├── app/
-│   │   ├── models/           # Pydantic schemas
-│   │   ├── routes/           # API endpoints
-│   │   └── services/         # Core analysis logic
-│   │       ├── pose_estimator.py    # MediaPipe pose detection
-│   │       ├── rep_detector.py      # Rep cycle detection
-│   │       ├── ant_calculator.py    # ANT calculation
-│   │       └── video_processor.py   # Orchestrator
-│   └── ...
-└── README.md
+├── api/                      # Vercel Python serverless functions
+│   ├── analyze.py            # POST /api/analyze endpoint
+│   ├── health.py             # GET /api/health endpoint
+│   ├── models/               # Pydantic schemas
+│   └── services/             # Core analysis logic
+│       ├── pose_estimator.py # MediaPipe pose detection
+│       ├── rep_detector.py   # Rep cycle detection
+│       ├── ant_calculator.py # ANT calculation
+│       └── video_processor.py# Orchestrator
+├── src/                      # React frontend
+│   ├── components/           # UI components
+│   ├── hooks/                # Custom React hooks
+│   ├── types/                # TypeScript types
+│   └── utils/                # Utility functions
+├── vercel.json               # Vercel configuration
+├── requirements.txt          # Python dependencies
+└── package.json              # Node dependencies
 ```
 
-### Tech Stack
+## Deploy to Vercel
 
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Recharts
-- **Backend**: Python 3.11, FastAPI, MediaPipe, OpenCV, NumPy
-- **Analysis Pipeline**: MediaPipe Pose → Rep Detection → ANT Calculation
+### One-Click Deploy
 
-### Why This Stack?
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/kb-threshold-app)
 
-- **Python backend**: Optimal for computer vision (MediaPipe, OpenCV) with excellent NumPy performance
-- **React frontend**: Type-safe, component-based UI with great charting support
-- **Vite**: Fast dev server with HMR and production builds
-- **FastAPI**: Modern async Python API with automatic OpenAPI docs
+### Manual Deploy
 
-## Installation
+1. Push this repo to GitHub
+2. Import in [Vercel Dashboard](https://vercel.com/new)
+3. Vercel auto-detects Vite + Python functions
+4. Deploy!
+
+## Local Development
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 18+
 - Python 3.11+
 - pip
 
-### Backend Setup
+### Install Dependencies
 
 ```bash
-cd backend
+# Frontend
+npm install
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+# Python (for local API testing)
 pip install -r requirements.txt
 ```
 
-### Frontend Setup
+### Run Development Server
 
+For Vercel dev (recommended):
 ```bash
-cd frontend
-
-# Install dependencies
-npm install
+npm i -g vercel
+vercel dev
 ```
 
-## Running the Application
+Or run frontend and backend separately:
 
-### Development Mode
-
-**Terminal 1 - Backend:**
+**Terminal 1 - Frontend:**
 ```bash
-cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload --port 8000
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
-
-### Production Mode
-
-**Backend:**
+**Terminal 2 - Backend (optional, for local testing):**
 ```bash
-cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+cd api
+python -m uvicorn analyze:handler --reload --port 8000
 ```
 
-**Frontend:**
-```bash
-cd frontend
-npm run build
-npm run preview
-```
-
-### Using Docker (Backend)
-
-```bash
-cd backend
-docker build -t kb-threshold-api .
-docker run -p 8000:8000 kb-threshold-api
-```
+Open http://localhost:5173 (or http://localhost:3000 with `vercel dev`)
 
 ## API Reference
 
@@ -123,7 +95,7 @@ Analyze a kettlebell video for anaerobic threshold.
 - Content-Type: `multipart/form-data`
 - Fields:
   - `movement_type`: one of `snatch_left`, `snatch_right`, `swing_left`, `swing_right`, `two_arm_swing`
-  - `video`: video file (MP4, MOV, max 500MB)
+  - `video`: video file (MP4, MOV, max 100MB on Vercel)
 
 **Response:**
 ```json
@@ -136,23 +108,8 @@ Analyze a kettlebell video for anaerobic threshold.
   "ant_rep_index": 27,
   "ant_timestamp_seconds": 115.2,
   "drop_percent_at_ant": 0.22,
-  "rep_metrics": [
-    {
-      "rep_index": 0,
-      "start_time": 2.1,
-      "end_time": 3.8,
-      "duration": 1.7,
-      "peak_speed": 0.856,
-      "is_valid": true,
-      "is_below_threshold": false
-    }
-  ],
-  "diagnostics": {
-    "fps_used": 15.0,
-    "frames_sampled": 2707,
-    "invalid_reps_filtered": 3,
-    "baseline_reps_used": 5
-  }
+  "rep_metrics": [...],
+  "diagnostics": {...}
 }
 ```
 
@@ -173,8 +130,6 @@ The rep detector identifies swing/snatch cycles using:
 - **Duration bounds**: Reps too short (<0.4s) or too long (>4s) are filtered
 - **Arc pattern**: Smooth pendulum motion vs. spiky noise
 
-Detection uses peak-to-peak segmentation where peaks represent the top of each swing/snatch.
-
 ### 3. ANT Calculation
 
 ANT is determined when:
@@ -183,7 +138,15 @@ ANT is determined when:
 
 **Baseline**: Average peak speed of the first 5 valid reps.
 
-This catches genuine fatigue-induced slowdown while filtering out random rep-to-rep variation.
+## Vercel Limitations
+
+- **Function timeout**: 60 seconds (Pro plan can extend to 300s)
+- **Payload size**: ~100MB for video uploads
+- **Cold starts**: First request may be slow due to MediaPipe loading
+
+For videos longer than ~2 minutes, consider:
+- Using Vercel Pro for extended timeouts
+- Deploying the Python backend separately (Railway, Render, Fly.io)
 
 ## Video Recording Guidelines
 
@@ -191,17 +154,18 @@ For best results:
 
 - **Angle**: Side view, perpendicular to the swing plane
 - **Distance**: 8-12 feet to capture full range of motion
-- **Framing**: Full body visible at all times (including overhead for snatches)
-- **Lighting**: Well-lit from the front, avoid strong backlighting
-- **Duration**: 10+ reps minimum, typical sets of 20-60 reps work well
-- **Format**: MP4 or MOV, up to 5 minutes at 30fps, 1080p
+- **Framing**: Full body visible at all times
+- **Lighting**: Well-lit from the front
+- **Duration**: 10-60 reps (30 seconds to 2 minutes ideal)
+- **Format**: MP4 or MOV, up to 100MB
 
 ## Real-Time Extension
 
 The analysis core is designed for future real-time camera mode:
 
 ```python
-from app.services import StreamingRepDetector, StreamingANTCalculator
+from api.services import StreamingRepDetector, StreamingANTCalculator
+from api.models import MovementType, PositionSample
 
 # Initialize once
 rep_detector = StreamingRepDetector(MovementType.TWO_ARM_SWING)
@@ -216,43 +180,13 @@ for rep in new_reps:
         print(f"ANT reached at rep {ant_result.ant_rep_index}")
 ```
 
-## Configuration
-
-### ANT Parameters
-
-Edit `backend/app/services/video_processor.py`:
-
-```python
-BASELINE_REPS = 5       # Reps used to calculate baseline speed
-DROP_THRESHOLD = 0.20   # 20% drop triggers ANT
-SMOOTHING_WINDOW = 3    # Moving average window
-SUSTAIN_COUNT = 2       # Consecutive below-threshold reps required
-```
-
-### Rep Detection Parameters
-
-Edit `backend/app/services/rep_detector.py`:
-
-```python
-MIN_VERTICAL_DISPLACEMENT_SWING = 0.15   # Normalized displacement
-MIN_VERTICAL_DISPLACEMENT_SNATCH = 0.25
-MAX_REP_DURATION = 4.0   # seconds
-MIN_REP_DURATION = 0.4   # seconds
-```
-
-## End-to-End Test
-
-1. Start both backend and frontend servers
-2. Navigate to http://localhost:5173
-3. Select a movement type (e.g., "Two-Arm Swing")
-4. Upload a test video (MP4/MOV of kettlebell swings)
-5. Click "Analyze Set"
-6. View results:
-   - Summary cards with rep count and ANT info
-   - Speed chart showing the threshold point
-   - Rep-by-rep table with metrics
-
 ## Troubleshooting
+
+### "Function timed out"
+
+- Video is too long for Vercel's 60s limit
+- Try a shorter video (<2 minutes)
+- Consider Vercel Pro or alternative backend hosting
 
 ### "Only X valid reps detected"
 
@@ -260,27 +194,21 @@ MIN_REP_DURATION = 0.4   # seconds
 - Check that the camera angle shows the full swing path
 - Verify the person's wrists are visible throughout
 
-### "No valid kettlebell swings/snatches detected"
+### Local development issues
 
-- The video may show movements that don't match swing/snatch patterns
-- Try a video with more pronounced vertical displacement
-- Ensure good lighting so pose detection works reliably
+If `vercel dev` doesn't work, you can test the Python API directly:
 
-### "Analysis taking too long"
-
-- Videos are downsampled to 15fps for processing
-- A 5-minute video may take 30-60 seconds to analyze
-- Check backend console for progress updates
-
-### MediaPipe installation issues
-
-On some systems, you may need additional dependencies:
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libgl1-mesa-glx
+# Install local dev dependencies
+pip install uvicorn
 
-# macOS (usually works out of box)
-# Windows (usually works out of box)
+# Run the API
+cd api && python -c "
+import sys
+sys.path.insert(0, '.')
+from analyze import handler
+print('API ready')
+"
 ```
 
 ## License

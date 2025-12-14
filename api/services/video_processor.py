@@ -4,19 +4,25 @@ Combines pose estimation, rep detection, and ANT calculation into a single pipel
 """
 
 import os
+import sys
 import cv2
 from typing import Callable
 
-from ..models import (
+# Add api directory to path for Vercel deployment
+_api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _api_dir not in sys.path:
+    sys.path.insert(0, _api_dir)
+
+from models.schemas import (
     MovementType,
     PositionSample,
     RepMetric,
     AnalysisDiagnostics,
     AnalysisResult,
 )
-from .pose_estimator import PoseEstimator, FramePose
-from .rep_detector import RepDetector, DetectedRep
-from .ant_calculator import ANTCalculator, ANTResult
+from services.pose_estimator import PoseEstimator, FramePose
+from services.rep_detector import RepDetector, DetectedRep
+from services.ant_calculator import ANTCalculator, ANTResult
 
 
 class VideoProcessor:
