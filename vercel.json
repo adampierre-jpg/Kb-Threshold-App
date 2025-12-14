@@ -1,8 +1,8 @@
 {
   "version": 2,
+  "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
   "functions": {
     "api/*.py": {
       "runtime": "@vercel/python@4.3.1",
